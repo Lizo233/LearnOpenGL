@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
 
         //‰÷»æ
         ourShader.use();
-        ourShader.setFloat("xOffset", 0.5f);
+        ourShader.setFloat("xOffset", 0.3f);
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
