@@ -1,3 +1,3 @@
-我学习LearnOpenGL的代码
+这里存放的是我学习LearnOpenGL的代码
 
-learnopengl-cn.github.io
+你可以在这个网站学OpenGL：learnopengl-cn.github.io
