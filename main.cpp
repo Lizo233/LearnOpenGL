@@ -143,12 +143,11 @@ int main(int argc, char* argv[]) {
         //清屏颜色变化
         glClearColor(0.2f * sin(glfwGetTime()), 0.3f, 0.3f * cos(glfwGetTime()), 1.0f);
         //清屏
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         //注意清屏必须在渲染之前，不能在渲染之后，不然会覆盖掉渲染结果
 
         //渲染
         ourShader.use();
-        ourShader.setFloat("xOffset", 0.3f);
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
