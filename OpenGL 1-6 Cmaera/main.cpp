@@ -367,7 +367,7 @@ int main(int argc, char* argv[]) {
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             ourShader.setMat4("model", model);
-            if (i % 3 == 0) {
+            if (i % 2 == 0) {
                 model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 0.3f, 0.5f));
                 ourShader.setMat4("model", model);
             }
