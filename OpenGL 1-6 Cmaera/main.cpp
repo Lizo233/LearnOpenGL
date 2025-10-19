@@ -21,23 +21,18 @@ int mWidth = WIDTH, mHeight = HEIGHT;
 glm::mat4 unitMat = glm::mat4(1.0f);
 
 //窗口大小被调整时调用的函数
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    mWidth = width;
-    mHeight = height;
-    glViewport(0, 0, width, height);
-}
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 //处理用户输入
-void processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-    }
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-    }
-}
+void processInput(GLFWwindow* window);
+
+//摄像机基础矩阵
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float deltaTime = 0.0f; // 当前帧与上一帧的时间差
+float lastFrame = 0.0f; // 上一帧的时间
 
 int main(int argc, char* argv[]) {
     
@@ -72,10 +67,10 @@ int main(int argc, char* argv[]) {
     }
 
     //设置视口的尺寸
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, WIDTH, HEIGHT);
     //注册窗口大小变化时调用的函数
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    glfwSwapInterval(1);
 
 
     //将数据复制到当前绑定的缓冲上，将数据复制到显存
@@ -296,7 +291,7 @@ int main(int argc, char* argv[]) {
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+        glGenerateMipmap(GL_TEXTURE_2D);//生成多级渐远纹理后
         stbi_image_free(data);
     }
 
@@ -306,22 +301,22 @@ int main(int argc, char* argv[]) {
     unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
 
     //投影矩阵 摄像机矩阵 模型矩阵 矩阵部分
-    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 model(1.0f);
     //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    glm::mat4 view = glm::mat4(1.0f);
+    //glm::mat4 view(1.0f);
     // 注意，我们将矩阵向我们要进行移动场景的反方向移动。
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
     //最后我们需要做的是定义一个投影矩阵。我们希望在场景中使用透视投影，
     // 所以像这样声明一个投影矩阵：
-    glm::mat4 projection = glm::mat4(1.0f);
+    glm::mat4 projection(1.0f);
     projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
 
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
 
-    //很多立方体
+    //很多立方体，的位置偏移
     glm::vec3 cubePositions[] = {
         glm::vec3(0.0f,  0.0f,  0.0f),
         glm::vec3(2.0f,  5.0f, -15.0f),
@@ -335,9 +330,18 @@ int main(int argc, char* argv[]) {
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
 
+    glm::mat4 view(1.0f);
+    view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f));
+
     //渲染循环
     while (!glfwWindowShouldClose(window))
     {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         //处理用户输入
         processInput(window);
 
@@ -362,18 +366,20 @@ int main(int argc, char* argv[]) {
 
         for (unsigned int i = 0; i < 10; i++)
         {
-            glm::mat4 model = glm::mat4(1.0f);
+            glm::mat4 model(1.0f);
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             ourShader.setMat4("model", model);
-            if (i % 2 == 0) {
+            if (i % 3 == 0) {
                 model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 0.3f, 0.5f));
                 ourShader.setMat4("model", model);
             }
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
         modelLoc = glGetUniformLocation(ourShader.ID, "view");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -399,4 +405,34 @@ int main(int argc, char* argv[]) {
     //关闭并清理
     glfwTerminate();
     return 0;
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    mWidth = width;
+    mHeight = height;
+    glViewport(0, 0, width, height);
+}
+
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    }
+    float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        cameraPos -= cameraUp * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        cameraPos += cameraUp * cameraSpeed;
 }
