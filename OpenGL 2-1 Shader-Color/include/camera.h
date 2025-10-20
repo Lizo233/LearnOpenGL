@@ -1,6 +1,6 @@
 #pragma once
 
-double yaw = -90.0f;//初始方向
+double yaw = -90.0;//初始方向
 double pitch = 0;
 
 //摄像机基础矩阵
@@ -24,6 +24,10 @@ extern int mWidth, mHeight;
 class Camera {
 public:
     void camera_processInput() {
+        
+        //glm::normalize(glm::cross(-glm::normalize(glm::cross(cameraFront, cameraUp)), cameraUp))
+        //以不改变y轴的方式向前后移动
+
         float cameraSpeed = 2.5f * deltaTime; // adjust accordingly|按需调整
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             cameraPos += cameraSpeed * cameraFront;
