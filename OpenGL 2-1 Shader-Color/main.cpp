@@ -6,7 +6,6 @@
 //非标准库
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <shader.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 //GLM数学库
@@ -14,8 +13,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#define WIDTH 800
-#define HEIGHT 600
+//自创建库
+#include <shader.h>
+#include <camera.h>
+
+#define WIDTH 1600
+#define HEIGHT 1200
 
 int mWidth = WIDTH, mHeight = HEIGHT;
 glm::mat4 unitMat = glm::mat4(1.0f);
@@ -26,13 +29,20 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 //处理用户输入
 void processInput(GLFWwindow* window);
 
-//摄像机基础矩阵
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+//监听鼠标输入
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+
+//监听鼠标滚轮
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 float deltaTime = 0.0f; // 当前帧与上一帧的时间差
 float lastFrame = 0.0f; // 上一帧的时间
+
+//创建相机
+Camera camera;
+
+//主窗口声明
+GLFWwindow* window = nullptr;
 
 int main(int argc, char* argv[]) {
     
@@ -48,7 +58,7 @@ int main(int argc, char* argv[]) {
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     //创建一个800x600的窗口
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL CN", NULL, NULL);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL CN", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window|无法创建GLFW窗口" << std::endl;
@@ -68,8 +78,17 @@ int main(int argc, char* argv[]) {
 
     //设置视口的尺寸
     glViewport(0, 0, WIDTH, HEIGHT);
+
     //注册窗口大小变化时调用的函数
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+    //注册鼠标移动时调用的函数
+    glfwSetCursorPosCallback(window, mouse_callback);
+
+    //注册鼠标滚轮移动时调用的函数
+    glfwSetScrollCallback(window, scroll_callback);
+
+    //设置FPS上限为显示器刷新率
     glfwSwapInterval(1);
 
 
@@ -311,7 +330,7 @@ int main(int argc, char* argv[]) {
     //最后我们需要做的是定义一个投影矩阵。我们希望在场景中使用透视投影，
     // 所以像这样声明一个投影矩阵：
     glm::mat4 projection(1.0f);
-    projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+    projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 1000.0f);
 
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
@@ -334,6 +353,9 @@ int main(int argc, char* argv[]) {
     view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f));
+
+    //鼠标将会被限制在窗口内且不显示，也不会离开窗口
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     //渲染循环
     while (!glfwWindowShouldClose(window))
@@ -361,9 +383,10 @@ int main(int argc, char* argv[]) {
         glBindVertexArray(VAO);
         
         //矩阵变换部分
+
+        //世界矩阵
         int modelLoc = glGetUniformLocation(ourShader.ID, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
         for (unsigned int i = 0; i < 10; i++)
         {
             glm::mat4 model(1.0f);
@@ -379,13 +402,16 @@ int main(int argc, char* argv[]) {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
+        //摄像机矩阵
+        view = camera.getView();
         modelLoc = glGetUniformLocation(ourShader.ID, "view");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+        //投影矩阵
+        projection = camera.getProjection();
         modelLoc = glGetUniformLocation(ourShader.ID, "projection");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(projection));
-        model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+
 
         //绘画
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -422,17 +448,15 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
-    float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        cameraPos -= cameraUp * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        cameraPos += cameraUp * cameraSpeed;
+    camera.camera_processInput();
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    camera.camera_mouse_callback(xpos, ypos);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    camera.camera_scroll_callback(xoffset,yoffset);
 }
