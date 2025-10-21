@@ -1,18 +1,5 @@
 #pragma once
 
-double yaw = -90.0;//初始方向
-double pitch = 0;
-
-//摄像机基础矩阵
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-//基本视张角
-float fov = 45.0f;
-
-bool firstMouse = true;
-double lastX, lastY;
 
 //将窗口变量外声明
 extern GLFWwindow* window;
@@ -23,6 +10,19 @@ extern int mWidth, mHeight;
 
 class Camera {
 public:
+    double yaw = -90.0;//初始方向
+    double pitch = 0;
+    
+    //摄像机基础矩阵
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    
+    //基本视张角
+    float fov = 45.0f;
+    
+    bool firstMouse = true;
+    double lastX, lastY;
     void camera_processInput() {
         
         //glm::normalize(glm::cross(-glm::normalize(glm::cross(cameraFront, cameraUp)), cameraUp))
