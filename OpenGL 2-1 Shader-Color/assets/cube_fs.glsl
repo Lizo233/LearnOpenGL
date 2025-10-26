@@ -17,29 +17,33 @@ struct Light {
     vec3 diffuse;
     vec3 specular;
 };
-
 uniform Light light;
 
 //材质
 struct Material {
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-    float shininess;
-}; 
+    sampler2D diffuse;
+    sampler2D specular;
+    float     shininess;
+};
 uniform Material material;
+
+in vec2 TexCoords;
+
+uniform sampler2D matrix;
+
+uniform float time;
 
 void main()
 {
     //计算环境光
-    vec3 ambient = material.ambient * light.ambient;
+    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
     
     //计算光源的漫反射
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
 
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * (light.diffuse * material.diffuse);
+    vec3 diffuse  = light.diffuse  * diff * vec3(texture(material.diffuse, TexCoords)); 
 
     //镜面反射
     float specularStrength = 0.5;
@@ -48,8 +52,16 @@ void main()
     vec3 reflectDir = reflect(-lightDir, norm);
     
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = light.specular * (spec * material.specular);
+
+    //vec3 color = vec3(texture(material.specular, TexCoords));
+    //color.r = 1.0 - color.r;
+    //color.g = 1.0 - color.g;
+    //color.b = 1.0 - color.b;
+
+    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
 
     vec3 result = ambient + diffuse + specular;
+    vec3 emission = vec3(texture(matrix, vec2(TexCoords.x,TexCoords.y + time * 0.5))) * abs(sin(time));
+
     FragColor = vec4(result, 1.0);
 }
