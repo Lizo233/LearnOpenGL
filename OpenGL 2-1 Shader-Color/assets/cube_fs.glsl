@@ -11,7 +11,8 @@ in vec3 FragPos;
 
 //光的颜色
 struct Light {
-    vec3 position;
+    //vec3 position;
+    vec3 direction;
 
     vec3 ambient;
     vec3 diffuse;
@@ -40,7 +41,7 @@ void main()
     
     //计算光源的漫反射
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(lightPos - FragPos);
+    vec3 lightDir = normalize(-light.direction);
 
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse  = light.diffuse  * diff * vec3(texture(material.diffuse, TexCoords)); 
@@ -53,15 +54,9 @@ void main()
     
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
-    //vec3 color = vec3(texture(material.specular, TexCoords));
-    //color.r = 1.0 - color.r;
-    //color.g = 1.0 - color.g;
-    //color.b = 1.0 - color.b;
-
     vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
 
     vec3 result = ambient + diffuse + specular;
-    vec3 emission = vec3(texture(matrix, vec2(TexCoords.x,TexCoords.y + time * 0.5))) * abs(sin(time));
 
     FragColor = vec4(result, 1.0);
 }
