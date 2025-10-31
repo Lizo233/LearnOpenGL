@@ -2,14 +2,14 @@
 out vec4 FragColor;
 
 //光的颜色
-struct Light {
-    vec3 position;
-
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-};
-uniform Light light;
+//struct Light {
+//    vec3 position;
+//
+//    vec3 ambient;
+//    vec3 diffuse;
+//    vec3 specular;
+//};
+//uniform Light light;
 
 void main()
 {

@@ -316,8 +316,17 @@ int main(int argc, char* argv[]) {
         lightingShader.setMat4("projection", projection);
         lightingShader.setVec3("viewPos", camera.cameraPos);
 
-        //光的位置和光的颜色
+        //光的位置、颜色、方向
+        
+        //从光源出发的方向
         lightingShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);
+        
+        //点光源
+        lightingShader.setVec3("light.position", lightPos);
+        lightingShader.setFloat("light.constant", 1.0f);
+        lightingShader.setFloat("light.linear", 0.09f);
+        lightingShader.setFloat("light.quadratic", 0.032f);
+
         lightingShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
         lightingShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f); // 将光照调暗了一些以搭配场景
         lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
@@ -329,6 +338,11 @@ int main(int argc, char* argv[]) {
 
         lightingShader.setInt("matrix", 2);
         lightingShader.setFloat("time", glfwGetTime());
+
+        //聚光
+        lightingShader.setVec3("light.position", camera.cameraPos);
+        lightingShader.setVec3("light.direction", camera.cameraFront);
+        lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
@@ -364,16 +378,19 @@ int main(int argc, char* argv[]) {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        /*lightCubeShader.use();
+        //小光源
+        lightCubeShader.use();
+        lightCubeShader.setMat4("projection", projection);
+        lightCubeShader.setMat4("view", view);
+        
+        model = glm::mat4(1.0f);
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(0.2f));
         lightCubeShader.setMat4("model", model);
-        lightCubeShader.setMat4("projection", projection);
-        lightCubeShader.setMat4("view", view);
-        lightCubeShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+        
         glBindVertexArray(lightCubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);*/
+        glBindVertexArray(0);
 
 
 
