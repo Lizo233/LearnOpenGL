@@ -75,7 +75,14 @@ void main()
     
     float theta = dot(lightDir, normalize(-light.direction));
     float epsilon   = light.cutOff - light.outerCutOff;
-    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);    
+    //theta是像素与屏幕中心线的夹角的余弦
+    //theta - outerCutOff > epsilon = cutOff - outerCutOff时
+    // (theta - outerCutOff) / (cutOff - outerCutOff) > 1 通过clamp使得其处于[0,1]区间
+    //当 0 < theta - outerCutOff < epsilon时，会渐变
+    //当 theta < 0 时，theta通过clamp变为 0
+    
+
     diffuse *= intensity;
     specular *= intensity;
     

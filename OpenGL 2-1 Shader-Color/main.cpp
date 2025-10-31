@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     }
     //将我们窗口的上下文作为该线程的主上下文
     glfwMakeContextCurrent(window);
-    //glfwSwapInterval(0);
+    //glfwSwapInterval(1);
 
     //初始化GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -324,8 +324,8 @@ int main(int argc, char* argv[]) {
         //点光源
         lightingShader.setVec3("light.position", lightPos);
         lightingShader.setFloat("light.constant", 1.0f);
-        lightingShader.setFloat("light.linear", 0.09f);
-        lightingShader.setFloat("light.quadratic", 0.032f);
+        lightingShader.setFloat("light.linear", 0.009f);
+        lightingShader.setFloat("light.quadratic", 0.0032f);
 
         lightingShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
         lightingShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f); // 将光照调暗了一些以搭配场景
@@ -342,8 +342,8 @@ int main(int argc, char* argv[]) {
         //聚光
         lightingShader.setVec3("light.position", camera.cameraPos);
         lightingShader.setVec3("light.direction", camera.cameraFront);
-        lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-        lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+        lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(10.0f)));
+        lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(15.0f)));
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
@@ -371,6 +371,7 @@ int main(int argc, char* argv[]) {
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            if (i != 0) model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 0.3f, 0.5f));
             lightingShader.setMat4("model", model);
             glm::mat4 tiModel = glm::transpose(glm::inverse(model));
             //转置逆矩阵
