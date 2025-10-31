@@ -343,6 +343,7 @@ int main(int argc, char* argv[]) {
         lightingShader.setVec3("light.position", camera.cameraPos);
         lightingShader.setVec3("light.direction", camera.cameraFront);
         lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+        lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);

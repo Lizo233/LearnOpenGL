@@ -19,6 +19,7 @@ struct Light {
 
     //手电筒
     float cutOff;
+    float outerCutOff;
 
     //点光源
     vec3 position;
@@ -71,10 +72,16 @@ void main()
     ambient  *= attenuation;
     diffuse  *= attenuation;
     specular *= attenuation;
+    
+    float theta = dot(lightDir, normalize(-light.direction));
+    float epsilon   = light.cutOff - light.outerCutOff;
+    float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+    diffuse *= intensity;
+    specular *= intensity;
+    
     vec3 result = ambient + diffuse + specular;
 
-    float theta = dot(lightDir, normalize(-light.direction));
 
-    if(theta > light.cutOff) FragColor = vec4(result, 1.0);
+    if(theta > light.outerCutOff) FragColor = vec4(result, 1.0);
     else FragColor = vec4(ambient, 1.0);
 }
