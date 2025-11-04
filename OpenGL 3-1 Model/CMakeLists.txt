@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 #将素材文件夹复制到执行目录
 file(GLOB ASSETS "./assets" )
 file(COPY ${ASSETS} DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY "./libs/assimp-vc143-mt.dll" DESTINATION ${CMAKE_BINARY_DIR})
 
 #链接/libs下的.lib文件
 link_directories(
