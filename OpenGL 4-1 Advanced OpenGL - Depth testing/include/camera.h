@@ -89,6 +89,6 @@ public:
         return glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
     }
     glm::mat4 getProjection() {
-        return glm::perspective(glm::radians(fov), (float)mWidth / mHeight, 0.01f, 1000.0f);
+        return glm::perspective(glm::radians(fov), (float)mWidth / mHeight, 0.1f, 100.0f);
     }
 };

@@ -208,16 +208,23 @@ int main(int argc, char* argv[]) {
     glm::mat4 view(1.0f);
     glm::mat4 projection(1.0f);
 
+    //鼠标将会被限制在窗口内且不显示，也不会离开窗口
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
+    Shader shader("./assets/depth-test-vs.glsl", "./assets/depth-test-fs.glsl");
+    
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
 
     //设置深度测试函数
     glDepthFunc(GL_LESS);
 
-    //鼠标将会被限制在窗口内且不显示，也不会离开窗口
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    //开启模板测试
+    glEnable(GL_STENCIL_TEST);
+    //glStencilMask(0xFF); // 每一位写入模板缓冲时都保持原样
+    //glStencilMask(0x00); // 每一位在写入模板缓冲时都会变成0（禁用写入）
 
-    Shader shader("./assets/depth-test-vs.glsl", "./assets/depth-test-fs.glsl");
+    Shader shaderSingleColor("./assets/depth-test-vs.glsl", "./assets/single-color-fs.glsl");
 
     //渲染循环
     while (!glfwWindowShouldClose(window))
@@ -236,7 +243,9 @@ int main(int argc, char* argv[]) {
         //清屏颜色变化
         glClearColor(0.2f * sin(glfwGetTime()), 0.3f, 0.3f * cos(glfwGetTime()), 1.0f);
         //清屏
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         //注意清屏必须在渲染之前，不能在渲染之后，不然会覆盖掉渲染结果
         
         //矩阵变换部分
@@ -261,25 +270,66 @@ int main(int argc, char* argv[]) {
 
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
-
-        // cubes
-        glBindVertexArray(cubeVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, cubeTexture);
-        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-        shader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-        shader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        // floor
+        
+        //画地板
+        glStencilMask(0x00); // 记得保证我们在绘制地板的时候不会更新模板缓冲
+        shader.use();
         glBindVertexArray(planeVAO);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         shader.setMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
+        
+
+
+        glStencilFunc(GL_ALWAYS, 1, 0xFF); // 所有的片段都应该更新模板缓冲
+        glStencilMask(0xFF); // 启用模板缓冲写入
+
+        // 画那两个容器
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        model = glm::translate(model, glm::vec3(-1.0f, 0.01f, -1.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(2.0f, 0.01f, 0.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00); // 禁止模板缓冲的写入
+        glDisable(GL_DEPTH_TEST);
+
+        shaderSingleColor.use();
+
+        // 画更大一点的两个容器
+        shaderSingleColor.setMat4("view", view);
+        shaderSingleColor.setMat4("projection", projection);
+
+        float scale = 1.1f;
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-1.0f, 0.01f, -1.0f));
+        model = glm::scale(model, glm::vec3(scale));
+        shaderSingleColor.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(2.0f, 0.01f, 0.0f));
+        model = glm::scale(model, glm::vec3(scale));
+        shaderSingleColor.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        glEnable(GL_DEPTH_TEST);
+        // floor
 
         //交换双缓冲
         glfwSwapBuffers(window);
