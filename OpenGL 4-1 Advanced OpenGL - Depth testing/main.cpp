@@ -23,7 +23,6 @@
 //自创建库
 #include <shader.h>
 #include <camera.h>
-
 #include <mesh.h>
 #include <model.h>
 
@@ -32,30 +31,27 @@ constexpr int HEIGHT = 1200;
 
 int mWidth = WIDTH, mHeight = HEIGHT;
 glm::mat4 unitMat = glm::mat4(1.0f);
+//各种矩阵的初始化
+glm::mat4 model(1.0f);
+glm::mat4 view(1.0f);
+glm::mat4 projection(1.0f);
 
-//窗口大小被调整时调用的函数
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
-//处理用户输入
-void processInput(GLFWwindow* window);
-
-//监听鼠标输入
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-
-//监听鼠标滚轮
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);  // 窗口大小被调整时调用的函数
+void processInput(GLFWwindow* window);                                      // 处理用户输入
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);          // 监听鼠标输入
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);   // 监听鼠标滚轮
 
 float deltaTime = 0.0f; // 当前帧与上一帧的时间差
 float lastFrame = 0.0f; // 上一帧的时间
 
 void loadTextureRGB(unsigned int* textureID, std::string path, int glTexture);
 void loadTextureRGBA(unsigned int* textureID, std::string path, int glTexture);
+unsigned int loadCubemap(std::vector<std::string> faces);
 
-//创建相机
-Camera camera;
+Camera camera; // 创建相机
 
-//主窗口声明
-GLFWwindow* window = nullptr;
+GLFWwindow* window = nullptr; // 声明主窗口
 
 int main(int argc, char* argv[]) {
 
@@ -99,6 +95,9 @@ int main(int argc, char* argv[]) {
 
     //设置FPS上限为显示器刷新率
     glfwSwapInterval(1);
+
+    //鼠标将会被限制在窗口内且不显示，也不会离开窗口
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     //大量的顶点数据
 
@@ -179,6 +178,62 @@ int main(int argc, char* argv[]) {
         1.0f,  0.5f,  0.0f,  1.0f,  0.0f
     };
 
+    float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+        // positions   // texCoords
+        0.0f,  1.0f,  0.0f, 1.0f,
+        0.0f, 0.0f,  0.0f, 0.0f,
+         1.0f, 0.0f,  1.0f, 0.0f,
+
+        0.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, 0.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    float skyboxVertices[] = {
+        // positions          
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+
     // cube VAO
     unsigned int cubeVAO, cubeVBO;
     glGenVertexArrays(1, &cubeVAO);
@@ -205,7 +260,7 @@ int main(int argc, char* argv[]) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
 
-    // 草的VAO
+    // 窗户的VAO
     unsigned int transparentVAO, transparentVBO;
     glGenVertexArrays(1, &transparentVAO);
     glGenBuffers(1, &transparentVBO);
@@ -218,7 +273,29 @@ int main(int argc, char* argv[]) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
 
-    // 草的位置
+    // 屏幕四边形的VAO（将帧缓冲作为纹理绘制到四边形上）
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    // 天空盒VAO
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    // 窗的位置
     std::vector<glm::vec3> windows;
     windows.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
     windows.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
@@ -248,21 +325,26 @@ int main(int argc, char* argv[]) {
     loadTextureRGB(&floorTexture, "./assets/metal.png", GL_TEXTURE1);
     loadTextureRGBA(&windowsTexture, "./assets/blending_transparent_window.png", GL_TEXTURE2);
 
-    //投影矩阵 摄像机矩阵 模型矩阵 矩阵部分
-    glm::mat4 model(1.0f);
-    glm::mat4 view(1.0f);
-    glm::mat4 projection(1.0f);
+    std::vector<std::string> faces
+    {
+        "./assets/skybox/right.jpg",
+        "./assets/skybox/left.jpg",
+        "./assets/skybox/top.jpg",
+        "./assets/skybox/bottom.jpg",
+        "./assets/skybox/front.jpg",
+        "./assets/skybox/back.jpg"
+    };
+    unsigned int cubemapTexture = loadCubemap(faces);
+    Shader skyboxShader("./assets/samplerCube-vs.glsl", "./assets/samplerCube-fs.glsl");
 
-    //鼠标将会被限制在窗口内且不显示，也不会离开窗口
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    
+
     Shader shader("./assets/depth-test-vs.glsl", "./assets/depth-test-fs.glsl");
     
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
 
     //设置深度测试函数
-    glDepthFunc(GL_LESS);
+    glDepthFunc(GL_LEQUAL);
 
     //开启模板测试
     glEnable(GL_STENCIL_TEST);
@@ -284,34 +366,70 @@ int main(int argc, char* argv[]) {
     // 剔除背向面
     glCullFace(GL_BACK);
 
+    // 创建一个帧缓冲对象，并绑定它
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+    // 创建一个纹理图像，我们将它作为一个颜色附件附加到帧缓冲上
+    // 生成纹理
+    unsigned int texColorBuffer;
+    glGenTextures(1, &texColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // 将它附加到当前绑定的帧缓冲对象
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+
+    // 添加一个深度（和模板）附件到帧缓冲中
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    // 将渲染缓冲对象附加到帧缓冲的深度和模板附件上
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    // 检查帧缓冲是否是完整的，如果不是，我们将打印错误信息
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    Shader screenShader("./assets/framebuffer-test-vs.glsl", "./assets/framebuffer-test-fs.glsl");
+    screenShader.use();
+    screenShader.setInt("screenTexture", 0);
+
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 线框模式
+
     //渲染循环
     while (!glfwWindowShouldClose(window))
     {
         //lightPos = glm::vec3(1.2f * cos(glfwGetTime()), 1.0f, 1.0f * sin(-glfwGetTime()));
 
-        float currentFrame = glfwGetTime();
+        float currentFrame = static_cast<float>(glfwGetTime()); // 返回自调用glfwInit()后的时间
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        //处理用户输入
-        processInput(window);
+        processInput(window); // 处理用户输入
 
         //设置清屏颜色
         //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         //清屏颜色变化
         glClearColor(0.2f * sin(glfwGetTime()), 0.3f, 0.3f * cos(glfwGetTime()), 1.0f);
-        //清屏
+        
+        //再次开启深度测试
         glEnable(GL_DEPTH_TEST);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        //清屏
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         //注意清屏必须在渲染之前，不能在渲染之后，不然会覆盖掉渲染结果
         
-        //矩阵变换部分
-        
         //世界矩阵
-
         model = glm::mat4(1.0f);
-
         //摄像机矩阵
         view = camera.getView();
         //投影矩阵
@@ -322,7 +440,7 @@ int main(int argc, char* argv[]) {
         //绘画
 
         shader.use();
-        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::mat4(1.0f);
 
         //将矩阵设置到shader中
         shader.setMat4("view", view);
@@ -336,8 +454,6 @@ int main(int argc, char* argv[]) {
         shader.setMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
-        
-
 
         //glStencilFunc(GL_ALWAYS, 1, 0xFF); // 所有的片段都应该更新模板缓冲
         glStencilMask(0xFF); // 启用模板缓冲写入
@@ -362,12 +478,10 @@ int main(int argc, char* argv[]) {
             float distance = glm::length(camera.cameraPos - windows[i]);
             sorted[distance] = windows[i];
         }
-
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, windowsTexture);
         
         // 画半透明的玻璃
-
         for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
         {
             model = glm::mat4(1.0f);
@@ -408,7 +522,69 @@ int main(int argc, char* argv[]) {
         //glEnable(GL_DEPTH_TEST);
         */
 
-            
+        /*
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
+
+        // make sure we clear the framebuffer's content
+        //glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        shader.use();
+        glm::mat4 model = glm::mat4(1.0f);
+        //后视镜模块
+        //camera.cameraFront.x = -camera.cameraFront.x;
+        //camera.cameraFront.z = -camera.cameraFront.z;
+        glm::mat4 view = camera.getView();
+        //camera.cameraFront.x = -camera.cameraFront.x;
+        //camera.cameraFront.z = -camera.cameraFront.z;
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+        shader.setMat4("view", view);
+        shader.setMat4("projection", projection);
+        // cubes
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        // floor
+        glBindVertexArray(planeVAO);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        shader.setMat4("model", glm::mat4(1.0f));
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+
+        // now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
+        // clear all relevant buffers
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+        //glClear(GL_COLOR_BUFFER_BIT);
+
+        screenShader.use();
+        glBindVertexArray(quadVAO);
+        glBindTexture(GL_TEXTURE_2D, texColorBuffer);	// use the color attachment texture as the texture of the quad plane
+        //glDrawArrays(GL_TRIANGLES, 0, 6);
+        */
+
+        // 画天空盒
+        glDepthMask(GL_FALSE);
+        skyboxShader.use();
+        skyboxShader.setMat4("projection",camera.getProjection());
+
+        glm::mat4 viewSkybox = glm::mat4(glm::mat3(camera.getView()));
+        skyboxShader.setMat4("view", viewSkybox);
+
+        glBindVertexArray(skyboxVAO);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDepthMask(GL_TRUE);
 
         //交换双缓冲
         glfwSwapBuffers(window);
@@ -419,8 +595,12 @@ int main(int argc, char* argv[]) {
     //删除不需要的资源
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &planeVAO);
+    glDeleteVertexArrays(1, &quadVAO);
     glDeleteBuffers(1, &cubeVBO);
     glDeleteBuffers(1, &planeVBO);
+    glDeleteBuffers(1, &quadVBO);
+    glDeleteRenderbuffers(1, &rbo);
+    glDeleteFramebuffers(1, &framebuffer);
 
     //关闭并清理
     glfwTerminate();
@@ -452,7 +632,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.camera_scroll_callback(xoffset,yoffset);
+    camera.camera_scroll_callback(xoffset, yoffset);
 }
 
 void loadTextureRGBA(unsigned int* textureID,std::string path, int glTexture)
@@ -514,4 +694,34 @@ void loadTextureRGB(unsigned int* textureID, std::string path, int glTexture)
     stbi_image_free(data);
 }
 
+unsigned int loadCubemap(std::vector<std::string> faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            );
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
